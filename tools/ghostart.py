@@ -143,6 +143,9 @@ def main() -> int:
             t.unlink()
     borrar_carpetas_vacias(THUMBS)
 
+    if [previo.get(i["p"]) for i in items] == items and len(previo) == len(items):
+        print(f"manifest.json sin cambios: {len(items)} imágenes")
+        return 0  # no se reescribe: así un push sin imágenes nuevas no genera un commit vacío
     MANIFEST.write_text(json.dumps({
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "count": len(items),

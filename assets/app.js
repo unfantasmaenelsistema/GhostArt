@@ -127,7 +127,7 @@
     state.list = l;
     state.shown = 0;
     $('#grid').innerHTML = '';
-    pintarMas();
+    rellenar();
     $('#status').textContent = t('count')(l.length, state.all.length) + (state.fallbackMsg ? ' · ' + t('fallback') : '');
     if (!l.length) {
       const e = document.createElement('p');
@@ -187,6 +187,18 @@
     }
     grid.append(frag);
     state.shown = fin;
+  }
+
+  // Pinta tandas mientras el final de la rejilla esté cerca de la pantalla. No basta con un
+  // IntersectionObserver: si la primera tanda no llega a empujar el final fuera de su margen
+  // (pantallas grandes, 6 columnas), nunca hay un cambio que notificar y se queda en 48.
+  function rellenar() {
+    const more = $('#more');
+    do pintarMas();
+    while (state.shown < state.list.length && more.getBoundingClientRect().top < innerHeight + 1200);
+  }
+  function rellenarLuego() {
+    if (state.shown < state.list.length) rellenar();
   }
 
   // ---------- Visor ----------
@@ -321,9 +333,8 @@
       x0 = null;
     });
 
-    new IntersectionObserver((ents) => {
-      if (ents[0].isIntersecting && state.shown < state.list.length) pintarMas();
-    }, { rootMargin: '800px' }).observe($('#more'));
+    window.addEventListener('scroll', rellenarLuego, { passive: true });
+    window.addEventListener('resize', rellenarLuego);
 
     try {
       const { images, fallback } = await cargar();

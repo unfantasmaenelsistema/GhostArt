@@ -1,0 +1,58 @@
+name: Galería (procesar y publicar)
+
+# En cada push: convierte a WebP lo que no lo sea, crea miniaturas, regenera
+# manifest.json, lo sube al repo y publica la web en GitHub Pages.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Pillow
+        run: pip install --quiet "pillow>=11"
+
+      - name: Procesar imágenes
+        run: python tools/ghostart.py
+
+      - name: Guardar cambios en el repo
+        run: |
+          git add -A img thumbs manifest.json
+          if git diff --cached --quiet; then
+            echo "Nada que guardar."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Galería: procesar imágenes nuevas"
+            git pull --rebase origin main
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

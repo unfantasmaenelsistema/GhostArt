@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GhostArt · Un Fantasma en el Sistema</title>
+<meta name="description" content="Banco de ilustraciones estilo anime de ciberseguridad de Un Fantasma en el Sistema, listas para reutilizar en artículos y vídeos.">
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script>
+  try {
+    const t = localStorage.getItem('ga_theme');
+    if (t) document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="./">
+    <img src="assets/logo.png" alt="" width="40" height="40">
+    <span><strong>GhostArt</strong><small data-i18n="tagline">Ilustraciones anime de ciberseguridad</small></span>
+  </a>
+  <nav class="links">
+    <a href="https://www.unfantasmaenelsistema.com/" target="_blank" rel="noopener" data-i18n="blog">Blog</a>
+    <a href="https://ghostore.unfantasmaenelsistema.com/" target="_blank" rel="noopener">GhoStore</a>
+    <a href="https://github.com/unfantasmaenelsistema/GhostArt" target="_blank" rel="noopener">GitHub</a>
+    <button id="lang" class="pill" type="button" aria-label="Cambiar idioma">EN</button>
+    <button id="theme" class="pill" type="button" aria-label="Cambiar tema">☀</button>
+  </nav>
+</header>
+
+<main>
+  <section class="controls">
+    <div class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" autocomplete="off" data-i18n-ph="search" placeholder="Buscar por tema: phishing, kerberos, wifi…">
+    </div>
+    <select id="sort" aria-label="Ordenar">
+      <option value="new" data-i18n="sortNew">Más recientes</option>
+      <option value="az" data-i18n="sortAz">Nombre A–Z</option>
+      <option value="rand" data-i18n="sortRand">Aleatorio</option>
+    </select>
+  </section>
+  <nav id="cats" class="cats" aria-label="Categorías"></nav>
+  <p id="status" class="status" aria-live="polite"></p>
+  <section id="grid" class="grid"></section>
+  <div id="more" class="more" aria-hidden="true"></div>
+</main>
+
+<footer class="foot">
+  <img src="assets/logo.png" alt="" width="28" height="28">
+  <span>© 2026 <a href="https://www.unfantasmaenelsistema.com/" target="_blank" rel="noopener">Un Fantasma en el Sistema</a> ·
+  <a href="https://ghostore.unfantasmaenelsistema.com/" target="_blank" rel="noopener">GhoStore</a> ·
+  <a href="https://github.com/unfantasmaenelsistema/GhostArt" target="_blank" rel="noopener">GitHub</a> ·
+  <a href="https://creativecommons.org/licenses/by/4.0/deed.es" target="_blank" rel="noopener license" data-i18n="lic">Imágenes CC BY 4.0</a> ·
+  <span data-i18n="foot">La galería se actualiza sola al subir imágenes a <code>img/</code>.</span></span>
+</footer>
+
+<dialog id="viewer" class="viewer">
+  <div class="v-bar">
+    <span id="v-title" class="v-title"></span>
+    <span id="v-meta" class="v-meta"></span>
+    <button class="icon" data-act="close" type="button" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="v-stage">
+    <button class="nav prev" data-act="prev" type="button" aria-label="Anterior">‹</button>
+    <img id="v-img" alt="">
+    <button class="nav next" data-act="next" type="button" aria-label="Siguiente">›</button>
+  </div>
+  <div class="v-actions">
+    <a id="v-dl" class="btn primary" download data-i18n="download">Descargar</a>
+    <button class="btn" data-copy="url" type="button" data-i18n="copyUrl">Copiar URL</button>
+    <button class="btn" data-copy="md" type="button">Markdown</button>
+    <button class="btn" data-copy="html" type="button">HTML</button>
+    <button class="btn" data-copy="link" type="button" data-i18n="copyLink">Enlace a esta vista</button>
+  </div>
+</dialog>
+<div id="toast" class="toast" role="status"></div>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

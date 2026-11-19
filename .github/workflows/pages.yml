@@ -6,6 +6,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"   # recoge lo que se suba a los repos almacén (almacenes.json)
 
 permissions:
   contents: write
@@ -36,11 +38,13 @@ jobs:
         run: python tools/ghostart.py
 
       - name: Guardar cambios en el repo
+        id: guardar
         run: |
-          git add -A img thumbs manifest.json
+          git add -A img gifs thumbs manifest.json
           if git diff --cached --quiet; then
             echo "Nada que guardar."
           else
+            echo "cambios=1" >> "$GITHUB_OUTPUT"
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git commit -m "Galería: procesar imágenes nuevas"
@@ -48,11 +52,15 @@ jobs:
             git push
           fi
 
-      - uses: actions/configure-pages@v5
+      # Las ejecuciones programadas solo publican si de verdad cambió algo.
+      - if: github.event_name != 'schedule' || steps.guardar.outputs.cambios == '1'
+        uses: actions/configure-pages@v5
 
-      - uses: actions/upload-pages-artifact@v3
+      - if: github.event_name != 'schedule' || steps.guardar.outputs.cambios == '1'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
       - id: deploy
+        if: github.event_name != 'schedule' || steps.guardar.outputs.cambios == '1'
         uses: actions/deploy-pages@v4

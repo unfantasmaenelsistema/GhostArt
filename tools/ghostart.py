@@ -10,14 +10,20 @@ Qué hace, de forma idempotente:
      borra el original. Si es más grande de MAX_LADO px se reduce.
   2. Crea thumbs/<misma ruta>.webp para las imágenes que no la tengan y borra
      las miniaturas huérfanas.
-  3. Reescribe manifest.json conservando la fecha en que entró cada imagen.
+  3. Hace lo mismo con gifs/: los GIF se conservan tal cual (con el nombre limpio)
+     y su miniatura es el primer fotograma en thumbs/gifs/.
+  4. Si existe almacenes.json, trae el manifest.json de cada repo «almacén» y
+     añade sus imágenes y GIF a la galería con URL absolutas.
+  5. Reescribe manifest.json conservando la fecha en que entró cada imagen.
 """
 from __future__ import annotations
 
 import json
 import re
 import sys
+import time
 import unicodedata
+import urllib.request
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -25,6 +31,8 @@ from PIL import Image, ImageOps
 
 RAIZ = Path(__file__).resolve().parent.parent
 IMG = RAIZ / "img"
+GIFS = RAIZ / "gifs"
+ALMACENES = RAIZ / "almacenes.json"
 THUMBS = RAIZ / "thumbs"
 MANIFEST = RAIZ / "manifest.json"
 
@@ -92,9 +100,46 @@ def borrar_carpetas_vacias(base: Path) -> None:
             d.rmdir()
 
 
+def normalizar_gif(origen: Path) -> Path:
+    rel = origen.relative_to(GIFS)
+    carpetas = [limpiar(p) for p in rel.parts[:-1]]
+    dst = GIFS.joinpath(*carpetas, limpiar(origen.stem) + ".gif")
+    if dst == origen:
+        return origen
+    dst = destino_libre(dst, origen)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    origen.replace(dst)
+    print(f"  normalizado: gifs/{rel.as_posix()} -> gifs/{dst.relative_to(GIFS).as_posix()}")
+    return dst
+
+
+def traer_almacenes(previo: dict) -> list:
+    """Imágenes y GIF de los repos «almacén» (almacenes.json), con URL absolutas.
+
+    Si un almacén no responde se conserva lo que había en el manifiesto anterior,
+    para que una caída de red no vacíe la galería.
+    """
+    if not ALMACENES.exists():
+        return []
+    items = []
+    for a in json.loads(ALMACENES.read_text(encoding="utf-8")):
+        base = a["base"].rstrip("/") + "/"
+        try:
+            with urllib.request.urlopen(f"{base}manifest.json?t={int(time.time())}", timeout=40) as r:
+                remotos = json.loads(r.read().decode("utf-8"))["images"]
+            nuevos = [{**i, "p": base + i["p"], "t": base + i["t"], "a": a["nombre"]} for i in remotos]
+            print(f"  almacén {a['nombre']}: {len(nuevos)} elementos")
+        except Exception as e:  # noqa: BLE001
+            nuevos = [i for i in previo.values() if i.get("a") == a["nombre"]]
+            print(f"  AVISO: almacén {a['nombre']} no responde ({e}); se conservan {len(nuevos)}", file=sys.stderr)
+        items.extend(nuevos)
+    return items
+
+
 def main() -> int:
     IMG.mkdir(exist_ok=True)
     THUMBS.mkdir(exist_ok=True)
+    GIFS.mkdir(exist_ok=True)
 
     previo = {}
     if MANIFEST.exists():
@@ -137,6 +182,39 @@ def main() -> int:
             "s": f.stat().st_size,
             "d": previo.get(p, {}).get("d", hoy),
         })
+
+    gifs = []
+    for f in sorted(p for p in GIFS.rglob("*") if p.is_file() and p.suffix.lower() == ".gif"):
+        try:
+            gifs.append(normalizar_gif(f))
+        except OSError as e:
+            print(f"  AVISO: no se pudo procesar {f.relative_to(RAIZ)}: {e}", file=sys.stderr)
+    borrar_carpetas_vacias(GIFS)
+    for f in sorted(set(gifs)):
+        rel = f.relative_to(GIFS).as_posix()
+        thumb = THUMBS / "gifs" / (rel[:-4] + ".webp")
+        esperadas.add(thumb)
+        if not thumb.exists() or thumb.stat().st_mtime < f.stat().st_mtime:
+            with Image.open(f) as im:
+                im.seek(0)
+                guardar_webp(im.convert("RGB"), thumb, THUMB_LADO, THUMB_CALIDAD)
+        with Image.open(f) as im:
+            w, h = im.size
+        p = f"gifs/{rel}"
+        partes = rel.split("/")
+        items.append({
+            "p": p,
+            "t": f"thumbs/gifs/{rel[:-4]}.webp",
+            "c": partes[0] if len(partes) > 1 else "",
+            "n": f.stem,
+            "k": "gif",
+            "w": w,
+            "h": h,
+            "s": f.stat().st_size,
+            "d": previo.get(p, {}).get("d", hoy),
+        })
+
+    items.extend(traer_almacenes(previo))
 
     for t in THUMBS.rglob("*"):
         if t.is_file() and t not in esperadas:

@@ -84,6 +84,21 @@ select {
 .cat:hover { border-color: var(--accent); }
 .cat[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .cat[aria-pressed="true"] b { color: inherit; opacity: .75; }
+.tipos { display: flex; gap: 6px; margin: 16px 0 0; }
+.tipos[hidden] { display: none; }
+.tipo {
+  border: 1px solid var(--border); background: var(--surface); border-radius: 10px;
+  padding: 7px 16px; cursor: pointer; font-weight: 600; display: inline-flex; gap: 8px; align-items: center;
+}
+.tipo b { color: var(--muted); font-weight: 600; font-size: .78rem; }
+.tipo:hover { border-color: var(--accent); }
+.tipo[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.tipo[aria-pressed="true"] b { color: inherit; opacity: .75; }
+.tipos + .cats { margin-top: 12px; }
+.card.gif::after {
+  content: "GIF"; position: absolute; top: 8px; right: 8px; font-size: .68rem; font-weight: 700; letter-spacing: .06em;
+  padding: 2px 7px; border-radius: 6px; background: rgba(0,0,0,.65); color: #fff; pointer-events: none;
+}
 .status { color: var(--muted); font-size: .88rem; margin: 10px 0 14px; min-height: 1.3em; }
 
 /* Rejilla */

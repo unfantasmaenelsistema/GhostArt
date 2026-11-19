@@ -15,14 +15,15 @@
       search: 'Buscar por tema: phishing, kerberos, wifi…',
       sortNew: 'Más recientes', sortAz: 'Nombre A–Z', sortRand: 'Aleatorio',
       all: 'Todas', loose: 'Sin clasificar',
-      count: (n, t) => n === t ? `${t} imágenes` : `${n} de ${t} imágenes`,
+      tImg: 'Imágenes', tGif: 'GIFs',
+      count: (n, t, g) => n === t ? `${t} ${g ? 'GIFs' : 'imágenes'}` : `${n} de ${t} ${g ? 'GIFs' : 'imágenes'}`,
       none: 'No hay imágenes que coincidan.',
       loading: 'Cargando galería…',
       error: 'No se pudo cargar la galería. Prueba a recargar dentro de un rato.',
       fallback: 'Mostrando la lista directa del repositorio (el índice se está regenerando).',
       download: 'Descargar', copyUrl: 'Copiar URL', copyLink: 'Enlace a esta vista',
       copied: 'Copiado al portapapeles', copyFail: 'No se pudo copiar',
-      foot: 'La galería se actualiza sola al subir imágenes a img/.',
+      foot: 'La galería se actualiza sola al subir imágenes o GIF.',
       lic: 'Imágenes CC BY 4.0',
     },
     en: {
@@ -31,14 +32,15 @@
       search: 'Search by topic: phishing, kerberos, wifi…',
       sortNew: 'Newest', sortAz: 'Name A–Z', sortRand: 'Random',
       all: 'All', loose: 'Unsorted',
-      count: (n, t) => n === t ? `${t} images` : `${n} of ${t} images`,
+      tImg: 'Images', tGif: 'GIFs',
+      count: (n, t, g) => n === t ? `${t} ${g ? 'GIFs' : 'images'}` : `${n} of ${t} ${g ? 'GIFs' : 'images'}`,
       none: 'No images match.',
       loading: 'Loading gallery…',
       error: 'The gallery could not be loaded. Try reloading in a while.',
       fallback: 'Showing the raw repository listing (the index is being rebuilt).',
       download: 'Download', copyUrl: 'Copy URL', copyLink: 'Link to this view',
       copied: 'Copied to clipboard', copyFail: 'Could not copy',
-      foot: 'The gallery updates itself when images are pushed to img/.',
+      foot: 'The gallery updates itself when images or GIFs are pushed.',
       lic: 'Images CC BY 4.0',
     },
   };
@@ -76,7 +78,7 @@
   if (!I18N[lang]) lang = 'es';
   const t = (k) => I18N[lang][k];
 
-  const state = { all: [], list: [], shown: 0, cat: '', q: '', sort: 'new', idx: -1, seed: Math.random() };
+  const state = { all: [], tipo: 'img', list: [], shown: 0, cat: '', q: '', sort: 'new', idx: -1, seed: Math.random() };
 
   // ---------- Datos ----------
   const nombreBonito = (n) => n.replace(/-/g, ' ');
@@ -116,9 +118,31 @@
     return h >>> 0;
   }
 
+  const delTipo = () => state.all.filter((i) => (i.k === 'gif') === (state.tipo === 'gif'));
+
+  function pintarTipos() {
+    const nav = $('#tipos');
+    nav.innerHTML = '';
+    for (const [k, lab] of [['img', 'tImg'], ['gif', 'tGif']]) {
+      const n = state.all.filter((i) => (i.k === 'gif') === (k === 'gif')).length;
+      if (k === 'gif' && !n) continue;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tipo';
+      b.setAttribute('aria-pressed', String(state.tipo === k));
+      b.append(t(lab) + ' ');
+      const c = document.createElement('b');
+      c.textContent = n;
+      b.append(c);
+      b.onclick = () => { if (state.tipo !== k) { state.tipo = k; state.cat = ''; aplicar(); } };
+      nav.append(b);
+    }
+    nav.hidden = nav.children.length < 2;
+  }
+
   function aplicar() {
     const palabras = sinTildes(state.q).split(/[\s,]+/).filter(Boolean);
-    let l = state.all.filter((i) =>
+    let l = delTipo().filter((i) =>
       (!state.cat || i.c === state.cat) &&
       palabras.every((w) => i._busca.includes(w)));
     if (state.sort === 'az') l.sort((a, b) => a.n.localeCompare(b.n));
@@ -128,20 +152,21 @@
     state.shown = 0;
     $('#grid').innerHTML = '';
     rellenar();
-    $('#status').textContent = t('count')(l.length, state.all.length) + (state.fallbackMsg ? ' · ' + t('fallback') : '');
+    $('#status').textContent = t('count')(l.length, delTipo().length, state.tipo === 'gif') + (state.fallbackMsg ? ' · ' + t('fallback') : '');
     if (!l.length) {
       const e = document.createElement('p');
       e.className = 'empty';
       e.textContent = t('none');
       $('#grid').append(e);
     }
+    pintarTipos();
     pintarCats();
     guardarUrl();
   }
 
   function pintarCats() {
     const cuenta = {};
-    for (const i of state.all) cuenta[i.c] = (cuenta[i.c] || 0) + 1;
+    for (const i of delTipo()) cuenta[i.c] = (cuenta[i.c] || 0) + 1;
     const cats = Object.keys(cuenta).sort((a, b) => (a === '') - (b === '') || catLabel(a).localeCompare(catLabel(b)));
     const nav = $('#cats');
     nav.innerHTML = '';
@@ -157,7 +182,7 @@
       b.onclick = () => { state.cat = c; aplicar(); };
       nav.append(b);
     };
-    boton('', t('all'), state.all.length);
+    boton('', t('all'), delTipo().length);
     for (const c of cats) if (c !== '' || cuenta[''] ) boton(c, catLabel(c), cuenta[c]);
   }
 
@@ -183,6 +208,12 @@
       cap.className = 'cap';
       cap.textContent = nombreBonito(i.n);
       b.append(img, cap);
+      if (i.k === 'gif') {
+        b.classList.add('gif');
+        // La miniatura es el primer fotograma; el GIF animado solo se carga al pasar el ratón.
+        b.addEventListener('mouseenter', () => { img.src = i.p; });
+        b.addEventListener('mouseleave', () => { img.src = i.t; });
+      }
       frag.append(b);
     }
     grid.append(frag);
@@ -203,6 +234,13 @@
 
   // ---------- Visor ----------
   const abs = (p) => new URL(p, location.href).href;
+  // Clave corta para el enlace #img=: sin el prefijo img/ (compatible con los enlaces antiguos);
+  // los GIF llevan gifs/ y lo que vive en un almacén, «almacén@».
+  const clave = (i) => {
+    const m = i.p.match(/(?:^|\/)(img|gifs)\/(.+)$/);
+    const base = m ? (m[1] === 'img' ? m[2] : 'gifs/' + m[2]) : i.p;
+    return i.a ? i.a + '@' + base : base;
+  };
   const kb = (s) => s > 1048576 ? (s / 1048576).toFixed(1) + ' MB' : Math.round(s / 1024) + ' KB';
 
   function abrir(k) {
@@ -213,10 +251,11 @@
     $('#v-img').src = i.p;
     $('#v-img').alt = nombreBonito(i.n);
     $('#v-title').textContent = nombreBonito(i.n);
-    $('#v-meta').textContent = [catLabel(i.c), i.w ? `${i.w}×${i.h}` : '', i.s ? kb(i.s) : '', `${k + 1}/${state.list.length}`]
+    $('#v-meta').textContent = [i.k === 'gif' && !i.c ? 'GIF' : catLabel(i.c), i.w ? `${i.w}×${i.h}` : '', i.s ? kb(i.s) : '', `${k + 1}/${state.list.length}`]
       .filter(Boolean).join(' · ');
     $('#v-dl').href = i.p;
     $('#v-dl').setAttribute('download', i.p.split('/').pop());
+    $('#viewer').classList.toggle('is-gif', i.k === 'gif');
     const sig = state.list[k + 1];
     if (sig) new Image().src = sig.p;
     if (!v.open) v.showModal();
@@ -264,7 +303,8 @@
     if (state.q) p.set('q', state.q);
     if (state.sort !== 'new') p.set('sort', state.sort);
     const v = $('#viewer');
-    if (v.open && state.list[state.idx]) p.set('img', state.list[state.idx].p.slice(4));
+    if (v.open && state.list[state.idx]) p.set('img', clave(state.list[state.idx]));
+    if (state.tipo === 'gif') p.set('tipo', 'gif');
     const s = p.toString();
     history.replaceState(null, '', s ? '#' + s : location.pathname + location.search);
   }
@@ -272,6 +312,7 @@
     const p = new URLSearchParams(location.hash.slice(1));
     state.cat = p.get('cat') || '';
     state.q = p.get('q') || '';
+    state.tipo = p.get('tipo') === 'gif' ? 'gif' : 'img';
     state.sort = ['az', 'rand'].includes(p.get('sort')) ? p.get('sort') : 'new';
     return p.get('img');
   }
@@ -350,14 +391,15 @@
   }
 
   function desdeUrl(imgUrl) {
-    if (state.cat && !state.all.some((i) => i.c === state.cat)) state.cat = '';
+    if (state.tipo === 'gif' && !state.all.some((i) => i.k === 'gif')) state.tipo = 'img';
+    if (state.cat && !delTipo().some((i) => i.c === state.cat)) state.cat = '';
     $('#q').value = state.q;
     $('#sort').value = state.sort;
     const v = $('#viewer');
     if (v.open) v.close();
     aplicar();
     if (imgUrl) {
-      const k = state.list.findIndex((i) => i.p === 'img/' + imgUrl);
+      const k = state.list.findIndex((i) => clave(i) === imgUrl);
       if (k >= 0) { while (k >= state.shown) pintarMas(); abrir(k); }
     }
   }

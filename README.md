@@ -24,7 +24,7 @@
 
 La galería **se actualiza sola**: no hay que tocar el `index.html`.
 
-1. Sube las imágenes a `img/<categoría>/`, desde la web de GitHub (*Add file → Upload files*) o con `git push`.
+1. Sube las imágenes a `img/<categoría>/` (aquí o en un almacén), desde la web de GitHub (*Add file → Upload files*) o con `git push`.
    - Valen JPG, PNG, WebP, GIF o AVIF, con cualquier nombre: espacios, tildes o mayúsculas.
    - Si quieres una categoría nueva, basta con crear su carpeta. Lo que dejes suelto en `img/` aparece como «Sin clasificar».
 2. En cada push, la Action [`pages.yml`](.github/workflows/pages.yml) ejecuta [`tools/ghostart.py`](tools/ghostart.py), que:
@@ -35,6 +35,27 @@ La galería **se actualiza sola**: no hay que tocar el `index.html`.
 
 > [!TIP]
 > Subir directamente en WebP ahorra espacio en el historial del repo: el JPG o PNG original se borra tras convertirlo, pero queda en el historial de git.
+
+## GIF
+
+Los GIF van en `gifs/` (se conservan tal cual; la miniatura es su primer fotograma y se animan al pasar el ratón).
+En la galería aparecen en la pestaña **GIFs**.
+
+## Almacenes (para no llenar este repo)
+
+GitHub Pages publica como máximo ~1 GB por sitio, y este repo lo publica entero. Por eso las imágenes nuevas pueden
+vivir en repos **almacén**, que la galería muestra como si fueran de aquí:
+
+| Almacén | Contenido |
+|---|---|
+| [`GhostArt-Almacen`](https://github.com/unfantasmaenelsistema/GhostArt-Almacen) | imágenes nuevas y los GIF |
+
+- Cada almacén tiene su propia Action y su `manifest.json`; `tools/ghostart.py` los lee según [`almacenes.json`](almacenes.json) y añade sus
+  imágenes (con URL absoluta) al `manifest.json` de aquí.
+- Se recogen en cada push a este repo y automáticamente cada 6 h (*Actions → Run workflow* para forzarlo ya).
+- Si un almacén no responde, la galería conserva lo último que sabía de él.
+- Para abrir otro: crea el repo con la misma estructura (copia `tools/`, `.github/` y `.nojekyll` de un almacén), activa Pages
+  (*Source: GitHub Actions*) y añade su `nombre` y `base` a `almacenes.json`.
 
 ## Categorías
 
